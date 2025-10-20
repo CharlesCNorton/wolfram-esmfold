@@ -156,6 +156,42 @@ foldingTime = foldEndTime - foldStartTime;
 
 predCA = ExtractCA[uchL3Pred];
 
+(* === CONFIDENCE SCORE EXTRACTION (ADDED FOR VALIDATION) === *)
+(* Extract confidence scores immediately after folding to ensure *)
+(* they correspond to the same prediction used in all analyses *)
+
+confidenceScores = {};
+confidenceExtracted = False;
+
+(* Try multiple methods to extract confidence/pLDDT scores *)
+Quiet[
+  confidenceScores = BioMoleculeValue[uchL3Pred, "BFactors"];
+  If[Length[confidenceScores] > 0 && Length[confidenceScores] == Length[predCA],
+    confidenceExtracted = True;
+    Print["  [Confidence] Extracted from BFactors"];
+  ];
+];
+
+If[!confidenceExtracted,
+  Quiet[
+    confidenceScores = BioMoleculeValue[uchL3Pred, "TemperatureFactor"];
+    If[Length[confidenceScores] > 0 && Length[confidenceScores] == Length[predCA],
+      confidenceExtracted = True;
+      Print["  [Confidence] Extracted from TemperatureFactor"];
+    ];
+  ];
+];
+
+If[confidenceExtracted,
+  (* Immediately save confidence scores *)
+  Export["D:\\uchl3_prediction_confidence.mx", confidenceScores];
+  Print["  [Confidence] Mean: ", Round[Mean[confidenceScores], 0.1]];
+  Print["  [Confidence] Saved to uchl3_prediction_confidence.mx"];
+  ,
+  Print["  [Confidence] WARNING: Could not extract confidence scores"];
+  Print["  [Confidence] Wolfram BioMolecule may not expose pLDDT data"];
+];
+
 Print["  \[Checkmark] Folding complete"];
 Print["  Folding Time: ", Round[foldingTime, 0.1], " seconds"];
 Print["  Predicted CA atoms: ", Length[predCA]];
@@ -427,6 +463,12 @@ Print["  \[Checkmark] uchl3_experimental_distance_matrix.mx"];
 
 Export["D:\\uchl3_predicted_distance_matrix.mx", predDistMatrix];
 Print["  \[Checkmark] uchl3_predicted_distance_matrix.mx"];
+
+(* Export confidence scores if extracted *)
+If[confidenceExtracted,
+  Export["D:\\uchl3_prediction_confidence_final.mx", confidenceScores];
+  Print["  \[Checkmark] uchl3_prediction_confidence_final.mx"];
+];
 
 (* Export detailed report *)
 reportText = StringJoin[
